@@ -23,6 +23,29 @@ initGameoverCheck_t2i7 initBoard p o whiteCount blackNum
         | otherwise                                                     = False 
 
 
+-- Custom data type to represent an n-ary tree of board states
+
+data StateTree = StateTree { state :: [String], stateTree :: [StateTree] } deriving (Show)
+
+
+-- Generates a move tree of a given depth
+
+generateMoveTree :: Int -> Char -> [String]-> StateTree
+generateMoveTree depth whosTurn boardState
+    | depth == 0    = StateTree boardState []
+    | otherwise     = StateTree boardState (map (generateMoveTree (depth - 1) nextTurn) (generateNewStates_t2i7 boardState whosTurn))
+        where nextTurn = if whosTurn == 'w' then 'b' else 'w'
+
+
+-- Perform minimax evaluation algorithm
+
+miniMax :: Char -> StateTree -> Float
+miniMax 'w' (StateTree boardState []) = boardEval_t2i7 boardState 'w' 'b' 'w'
+miniMax 'b' (StateTree boardState []) = boardEval_t2i7 boardState 'b' 'w' 'b'
+miniMax 'w' (StateTree boardState children) = maximum (map (miniMax 'b') children)
+miniMax 'b' (StateTree boardState children) = maximum (map (miniMax 'w') children)
+
+
 {- ************************************** 
         STATIC BOARD EVALUATOR 
    ************************************** -}
@@ -240,10 +263,12 @@ movePiece_t2i7 boardState oldPos newPos
 -- Returns a tuple containing the new board state and the previous value at that position
 
 replacePiece_t2i7 :: [String] -> (Int, Int) -> Char -> ([String], Char)
-replacePiece_t2i7 boardState pos value = (replaceSegment_t2i7 boardState row [rowState], (boardState !! row) !! col)
-    where rowState = replaceSegment_t2i7 (boardState !! row) col [value] ;
-          row = fst pos ;
-          col = snd pos
+replacePiece_t2i7 boardState pos value
+  | null boardState = ([], '-')
+  | otherwise       = (replaceSegment_t2i7 boardState row [rowState], (boardState !! row) !! col)
+      where rowState = replaceSegment_t2i7 (boardState !! row) col [value] ;
+            row = fst pos ;
+            col = snd pos
 
 
 -- Returns a list of position tuples (row,column) for all pieces for the given player
@@ -262,7 +287,7 @@ getPiecesInRow_t2i7 :: String -> Char -> Int -> Int -> [(Int, Int)]
 getPiecesInRow_t2i7 rowState player rowNum colNum
     | null rowState             = []
     | head rowState == player   = (rowNum, colNum) : result
-    | otherwise                 = result
+    | otherwise                  = result
         where result = getPiecesInRow_t2i7 (tail rowState) player rowNum (colNum + 1)
 
 
